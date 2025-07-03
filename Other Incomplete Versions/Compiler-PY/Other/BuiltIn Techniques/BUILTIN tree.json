@@ -1,0 +1,55 @@
+{
+    "type": "Module",
+    "body": [
+        {
+            "type": "If",
+            "test": {
+                "type": "Compare",
+                "left": {
+                    "type": "Name",
+                    "id": "x",
+                    "ctx": {
+                        "type": "Load"
+                    }
+                },
+                "ops": [
+                    {
+                        "type": "Lt"
+                    }
+                ],
+                "comparators": [
+                    {
+                        "type": "Constant",
+                        "value": 10,
+                        "kind": null
+                    }
+                ]
+            },
+            "body": [
+                {
+                    "type": "Expr",
+                    "value": {
+                        "type": "Call",
+                        "func": {
+                            "type": "Name",
+                            "id": "print",
+                            "ctx": {
+                                "type": "Load"
+                            }
+                        },
+                        "args": [
+                            {
+                                "type": "Constant",
+                                "value": "hello",
+                                "kind": null
+                            }
+                        ],
+                        "keywords": []
+                    }
+                }
+            ],
+            "orelse": []
+        }
+    ],
+    "type_ignores": []
+}

@@ -1,0 +1,82 @@
+[
+    {
+        "function_declaration": {
+            "name": "main",
+            "parameters": [
+                {
+                    "label": "x",
+                    "type": "integer",
+                    "value": null
+                }
+            ],
+            "body": [
+                {
+                    "if": {
+                        "condition": {
+                            "type": "equal",
+                            "left": {
+                                "variable": "x"
+                            },
+                            "right": {
+                                "integer": 10
+                            }
+                        },
+                        "then": [
+                            {
+                                "function_call": {
+                                    "name": "print",
+                                    "parameters": [
+                                        {
+                                            "variable": "x"
+                                        }
+                                    ]
+                                }
+                            }
+                        ],
+                        "else": [
+                            {
+                                "increment": {
+                                    "variable": "x",
+                                    "value": 1
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "variable": {
+            "label": "string",
+            "type": "String",
+            "value": "Hello World!"
+        }
+    },
+    {
+        "function_call": {
+            "name": "main",
+            "parameters": [
+                {
+                    "integer": 5
+                }
+            ]
+        }
+    },
+    {
+        "variable": {
+            "label": "vartwo",
+            "type": "None",
+            "value": {
+                "called_function": {
+                    "name": "main",
+                    "parameters": [
+                        {
+                            "integer": 4
+                        }
+                    ]
+                }
+            }
+        }
+    }
+]

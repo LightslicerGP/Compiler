@@ -1,0 +1,158 @@
+[
+    {
+        "type": "NAME",
+        "value": "if",
+        "start": [
+            1,
+            0
+        ],
+        "end": [
+            1,
+            2
+        ]
+    },
+    {
+        "type": "NAME",
+        "value": "x",
+        "start": [
+            1,
+            3
+        ],
+        "end": [
+            1,
+            4
+        ]
+    },
+    {
+        "type": "OP",
+        "value": "<",
+        "start": [
+            1,
+            5
+        ],
+        "end": [
+            1,
+            6
+        ]
+    },
+    {
+        "type": "NUMBER",
+        "value": "10",
+        "start": [
+            1,
+            7
+        ],
+        "end": [
+            1,
+            9
+        ]
+    },
+    {
+        "type": "OP",
+        "value": ":",
+        "start": [
+            1,
+            9
+        ],
+        "end": [
+            1,
+            10
+        ]
+    },
+    {
+        "type": "NEWLINE",
+        "value": "\n",
+        "start": [
+            1,
+            10
+        ],
+        "end": [
+            1,
+            11
+        ]
+    },
+    {
+        "type": "INDENT",
+        "value": "    ",
+        "start": [
+            2,
+            0
+        ],
+        "end": [
+            2,
+            4
+        ]
+    },
+    {
+        "type": "NAME",
+        "value": "print",
+        "start": [
+            2,
+            4
+        ],
+        "end": [
+            2,
+            9
+        ]
+    },
+    {
+        "type": "OP",
+        "value": "(",
+        "start": [
+            2,
+            9
+        ],
+        "end": [
+            2,
+            10
+        ]
+    },
+    {
+        "type": "STRING",
+        "value": "\"hello\"",
+        "start": [
+            2,
+            10
+        ],
+        "end": [
+            2,
+            17
+        ]
+    },
+    {
+        "type": "OP",
+        "value": ")",
+        "start": [
+            2,
+            17
+        ],
+        "end": [
+            2,
+            18
+        ]
+    },
+    {
+        "type": "NEWLINE",
+        "value": "",
+        "start": [
+            2,
+            18
+        ],
+        "end": [
+            2,
+            19
+        ]
+    },
+    {
+        "type": "DEDENT",
+        "value": "",
+        "start": [
+            3,
+            0
+        ],
+        "end": [
+            3,
+            0
+        ]
+    }
+]

@@ -1,0 +1,287 @@
+[
+    {
+        "type": "comment",
+        "value": "# similar to python",
+        "line": "1"
+    },
+    {
+        "type": "keyword",
+        "value": "def",
+        "line": "3"
+    },
+    {
+        "type": "identifier",
+        "value": "main",
+        "line": "3"
+    },
+    {
+        "type": "left_paren",
+        "value": "(",
+        "line": "3"
+    },
+    {
+        "type": "identifier",
+        "value": "x",
+        "line": "3"
+    },
+    {
+        "type": "right_paren",
+        "value": ")",
+        "line": "3"
+    },
+    {
+        "type": "colon",
+        "value": ":",
+        "line": "3"
+    },
+    {
+        "type": "indentation",
+        "value": "1",
+        "line": "4"
+    },
+    {
+        "type": "keyword",
+        "value": "if",
+        "line": "4"
+    },
+    {
+        "type": "identifier",
+        "value": "x",
+        "line": "4"
+    },
+    {
+        "type": "equal",
+        "value": "==",
+        "line": "4"
+    },
+    {
+        "type": "integer",
+        "value": "10",
+        "line": "4"
+    },
+    {
+        "type": "colon",
+        "value": ":",
+        "line": "4"
+    },
+    {
+        "type": "indentation",
+        "value": "2",
+        "line": "5"
+    },
+    {
+        "type": "keyword",
+        "value": "print",
+        "line": "5"
+    },
+    {
+        "type": "left_paren",
+        "value": "(",
+        "line": "5"
+    },
+    {
+        "type": "identifier",
+        "value": "x",
+        "line": "5"
+    },
+    {
+        "type": "right_paren",
+        "value": ")",
+        "line": "5"
+    },
+    {
+        "type": "indentation",
+        "value": "1",
+        "line": "6"
+    },
+    {
+        "type": "keyword",
+        "value": "else",
+        "line": "6"
+    },
+    {
+        "type": "colon",
+        "value": ":",
+        "line": "6"
+    },
+    {
+        "type": "indentation",
+        "value": "2",
+        "line": "7"
+    },
+    {
+        "type": "identifier",
+        "value": "x",
+        "line": "7"
+    },
+    {
+        "type": "increment",
+        "value": "++",
+        "line": "7"
+    },
+    {
+        "type": "keyword",
+        "value": "def",
+        "line": "10"
+    },
+    {
+        "type": "identifier",
+        "value": "func",
+        "line": "10"
+    },
+    {
+        "type": "left_paren",
+        "value": "(",
+        "line": "10"
+    },
+    {
+        "type": "identifier",
+        "value": "x",
+        "line": "10"
+    },
+    {
+        "type": "right_paren",
+        "value": ")",
+        "line": "10"
+    },
+    {
+        "type": "colon",
+        "value": ":",
+        "line": "10"
+    },
+    {
+        "type": "indentation",
+        "value": "1",
+        "line": "11"
+    },
+    {
+        "type": "identifier",
+        "value": "x",
+        "line": "11"
+    },
+    {
+        "type": "assign",
+        "value": "=",
+        "line": "11"
+    },
+    {
+        "type": "integer",
+        "value": "12",
+        "line": "11"
+    },
+    {
+        "type": "addition",
+        "value": "+",
+        "line": "11"
+    },
+    {
+        "type": "integer",
+        "value": "2",
+        "line": "11"
+    },
+    {
+        "type": "indentation",
+        "value": "1",
+        "line": "12"
+    },
+    {
+        "type": "keyword",
+        "value": "return",
+        "line": "12"
+    },
+    {
+        "type": "identifier",
+        "value": "x",
+        "line": "12"
+    },
+    {
+        "type": "identifier",
+        "value": "string",
+        "line": "15"
+    },
+    {
+        "type": "assign",
+        "value": "=",
+        "line": "15"
+    },
+    {
+        "type": "string",
+        "value": "\"Hello World!\"",
+        "line": "15"
+    },
+    {
+        "type": "identifier",
+        "value": "main",
+        "line": "17"
+    },
+    {
+        "type": "left_paren",
+        "value": "(",
+        "line": "17"
+    },
+    {
+        "type": "integer",
+        "value": "5",
+        "line": "17"
+    },
+    {
+        "type": "right_paren",
+        "value": ")",
+        "line": "17"
+    },
+    {
+        "type": "identifier",
+        "value": "vartwo",
+        "line": "19"
+    },
+    {
+        "type": "assign",
+        "value": "=",
+        "line": "19"
+    },
+    {
+        "type": "identifier",
+        "value": "main",
+        "line": "19"
+    },
+    {
+        "type": "left_paren",
+        "value": "(",
+        "line": "19"
+    },
+    {
+        "type": "integer",
+        "value": "4",
+        "line": "19"
+    },
+    {
+        "type": "right_paren",
+        "value": ")",
+        "line": "19"
+    },
+    {
+        "type": "identifier",
+        "value": "varthree",
+        "line": "20"
+    },
+    {
+        "type": "assign",
+        "value": "=",
+        "line": "20"
+    },
+    {
+        "type": "identifier",
+        "value": "func",
+        "line": "20"
+    },
+    {
+        "type": "left_paren",
+        "value": "(",
+        "line": "20"
+    },
+    {
+        "type": "right_paren",
+        "value": ")",
+        "line": "20"
+    }
+]

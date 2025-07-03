@@ -1,0 +1,41 @@
+5/8/24
+remove comments
+remove extra lines
+replace 0x and 0b with their decimal numbers
+keep track of constants and their value, and delete the line
+keep track of a function names and their line number, and delete the line
+replace all constants with their value from the dictionary
+replace all function names with their line number from the dictionary
+capitalise all opcodes
+change any unsigned numbers to signed (for ldi?)
+fill missing operands
+remove last line
+
+upcoming (some by GPT):
+convert general opcodes to specific ones
+replace all register, immediate, and memory addresses with only numbers
+error handling
+optimizatoins
+make a machine bytecode version, as well as actual computation version (tuple)
+
+7/28/24
+for v3:
+
+remove comments
+remove extra lines
+replace 0x and 0b with their decimal numbers
+ - convert instructions that address memory into 2 instructions - dont need probs 3/4/35
+keep track of constants and their value, and delete the line
+keep track of a function names and their line number, and delete the line
+replace all constants with their value from the dictionary
+replace all function names with their line number from the dictionary
+convert registers to integers
+capitalise all opcodes
+change any unsigned numbers to signed (for ldi?)
+fill missing operands
+convert memory addresses to integers
+compile to specific opcodes
+remove last line
+^ wrong oder btw fix it
+
+3/4/25: also add error checking, see if the opcode has the right operands, if not send an error and continue to find others
