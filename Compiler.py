@@ -1,6 +1,7 @@
 import json, sys
 from Parts._1_Lexer import lexer
 from Parts._2_Parser import parser
+from Parts._3_Generator import generate
 
 if len(sys.argv) < 2:
     print("Usage: python <compilerLocation>.py <filename>.c [--debug for debug mode]")
@@ -22,5 +23,10 @@ print("Parsing...") if debug else None
 tree = parser(tokens)
 with open("tree.json", "w") as outfile:
     json.dump(tree, outfile, indent=2)
-    
+
+print("Generating...") if debug else None
+assembly = generate(tree)
+with open("assembly.json", "w") as outfile:
+    json.dump(assembly, outfile, indent=2)
+
 print("Done!") if debug else None

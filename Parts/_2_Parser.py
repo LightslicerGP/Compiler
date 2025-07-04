@@ -162,15 +162,14 @@ def variable_defenition(identifier, currentType):
         print_error("variable_defenition()", "assign")
     eatToken()  # equals
 
-    if currentToken("type") not in ["number", "string"]:
-        print_error("variable_defenition()", ["number", "string"])
-
-    value = currentToken("value")
-    eatToken()  # variable name
-
+    expression = []
+    while currentToken("type") != "semicolon":
+        expression.append(currentToken())
+        eatToken()  # item on the right side of expression
     if currentToken("type") != "semicolon":
-        print_error("variable_defenition()", "semicolon")
+        print_error("variable reassignment", "semicolon")
     eatToken()  # semicolon
+    value = parseExpression(expression)
 
     return {
         "node": "variableDefinition",

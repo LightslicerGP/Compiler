@@ -2,6 +2,7 @@
 .vscode/
 tokens.json
 tree.json
+assembly.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
