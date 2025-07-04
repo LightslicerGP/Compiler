@@ -2,6 +2,7 @@
 # but im gonna rewrite it all to the way i understand code
 # have mercy, i'm still learning how to do this :sob:
 
+
 class Register:
     def __init__(self, name):
         self.name = name
@@ -85,19 +86,15 @@ output = []
 def emit(line):
     output.append(line)
 
+
 def binary_op(op):
-    return {
-        "+": "ADD",
-        "-": "SUB",
-        "*": "MUL",
-        "/": "DIV"
-    }.get(op, "UNKNOWN")
+    return {"+": "add", "-": "sub", "*": "MUL", "/": "DIV"}.get(op, "UNKNOWN")
 
 
-def compile_expression(expr):
+def compile_expression(expr, target=None):
     if expr["node"] == "literal":
-        reg = alloc_full_register("literal")
-        emit(f"LOADI {reg}, #{expr['value']}")
+        reg = target if target else alloc_full_register("literal")
+        emit(f"lod {expr['value']}, {reg}")
         return reg
 
     elif expr["node"] == "binaryExpression":
@@ -105,64 +102,53 @@ def compile_expression(expr):
         left = expr["left"]
         right = expr["right"]
 
-        # Optimize if right is a literal (immediate add)
-        left_reg = compile_expression(left)
+        dest = target if target else alloc_full_register("bin_expr")
+
+        left_reg = compile_expression(left, target=dest)
 
         if right["node"] == "literal":
-            emit(f"{binary_op(op)} {left_reg}, {left_reg}, #{right['value']}")
-            return left_reg  # result is stored in same register
+            emit(f"{binary_op(op)} {left_reg}, {right['value']}, {left_reg}")
+            return left_reg
+
         else:
             right_reg = compile_expression(right)
-            result = alloc_full_register("bin_expr")
-            emit(f"{binary_op(op)} {result}, {left_reg}, {right_reg}")
-            free_register(left_reg)
+            if left_reg != dest:
+                emit(f"cpy {left_reg}, {dest}")
+                free_register(left_reg)
+            emit(f"{binary_op(op)} {dest}, {right_reg}, {dest}")
             free_register(right_reg)
-            return result
+            return dest
 
     else:
         raise NotImplementedError(f"Unsupported expression: {expr['node']}")
 
 
-def generate(tree):
-    for element in tree:
-        if element["node"] == "variableDefinition":
-            var_type = element["type"]
-            var_name = element["name"]
-            expr = element.get("value")
-            is_small = var_type in ("short", "char")
+def generator(tree):
+    for branch in tree:
+        if branch["node"] == "variableDefinition":
+            variable_name = branch["name"]
 
-            if var_name in symbol_table:
-                reg = symbol_table[var_name]
+            if variable_name in symbol_table:
+                variable_register = symbol_table[variable_name]
             else:
-                reg = (
-                    alloc_half_register(var_name)
-                    if is_small
-                    else alloc_full_register(var_name)
-                )
-                symbol_table[var_name] = reg
+                if branch["type"] in ("short", "char"):
+                    variable_register = alloc_half_register(variable_name)
+                else:
+                    variable_register = alloc_full_register(variable_name)
+                symbol_table[variable_name] = variable_register
 
-            if expr and expr["node"] == "literal":
-                emit(f"LOADI {reg}, #{expr['value']}")
-            elif expr:
-                temp = compile_expression(expr)
-                emit(f"MOV {reg}, {temp}")
-                free_register(temp)
+            expr = branch["value"]
+
+            if expr is None:
+                emit(f"lod 0, {variable_register}")
+            elif expr["node"] == "literal":
+                emit(f"lod {expr['value']}, {variable_register}")
             else:
-                emit(f"LOADI {reg}, #0")
+                result_reg = compile_expression(expr, target=variable_register)
 
-        elif element["node"] == "variableReassignment":
-            var_name = element["target"]
-            expr = element["value"]
-            if var_name not in symbol_table:
-                raise Exception(f"Variable {var_name} not defined")
-            reg = symbol_table[var_name]
-
-            if expr["node"] == "literal":
-                emit(f"LOADI {reg}, #{expr['value']}")
-            else:
-                temp = compile_expression(expr)
-                emit(f"MOV {reg}, {temp}")
-                free_register(temp)
+                if result_reg != variable_register:
+                    emit(f"cpy {result_reg}, {variable_register}")
+                    free_register(result_reg)
 
     return output
 

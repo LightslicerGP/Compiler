@@ -1,8 +1,8 @@
 # Added manually 7/2/25
 .vscode/
-tokens.json
-tree.json
-assembly.json
+_1_tokens.json
+_2_tree.json
+_3_assembly.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

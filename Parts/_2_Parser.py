@@ -81,6 +81,8 @@ def parse():
                 return parse_do()
             case "while":
                 return parse_while()
+            case "return":
+                return parse_return()
     elif currentToken("type") == "identifier":
         identifier = currentToken("value")
         eatToken()  # variable/function name
@@ -359,8 +361,28 @@ def parse_while():
     return {"node": "while", "condition": condition, "body": body}
 
 
+def parse_return():
+
+    if currentToken("type") != "keyword" or currentToken("value") != "return":
+        print_error("parse_return() (return)", "'return' keyword")
+    eatToken()  # return keyword
+
+    expression = []
+    while currentToken("type") != "semicolon":
+        expression.append(currentToken())
+        eatToken()  # item after return keyword
+    if currentToken("type") != "semicolon":
+        print_error("parse_return()", "semicolon")
+    eatToken()  # semicolon
+    value = parseExpression(expression)
+
+    return {
+        "node": "return",
+        "value": value,
+    }
+
+
 def parseExpression(tokens):
-    # Operator precedence (higher = binds tighter)
     precedence = {
         "logicalOr": 1,  # ||
         "logicalAnd": 2,  # &&
@@ -377,22 +399,21 @@ def parseExpression(tokens):
     }
 
     def parse_expr(i, min_prec=0):
-        # Get the left operand
         token = tokens[i]
         if token["type"] == "identifier":
             left = {"node": "identifier", "value": token["value"]}
+            i += 1
         elif token["type"] == "number":
             left = {"node": "literal", "value": token["value"]}
+            i += 1
         elif token["type"] == "leftParen":
             left, i = parse_expr(i + 1)
-            if tokens[i]["type"] != "rightParen":
+            if i >= len(tokens) or tokens[i]["type"] != "rightParen":
                 raise SyntaxError("Expected ')'")
             i += 1
         else:
             raise SyntaxError(f"Unexpected token: {token}")
-        i += 1
 
-        # Process binary operators
         while i < len(tokens):
             op = tokens[i]
             if op["type"] not in precedence:
@@ -402,12 +423,14 @@ def parseExpression(tokens):
             if prec < min_prec:
                 break
 
-            i += 1  # Consume operator
+            op_type = op["value"]
+            i += 1
+
             right, i = parse_expr(i, prec + 1)
 
             left = {
                 "node": "binaryExpression",
-                "type": op["value"],  # e.g., "+", "==", "&&"
+                "type": op_type,
                 "left": left,
                 "right": right,
             }

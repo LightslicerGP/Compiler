@@ -1,0 +1,37 @@
+[
+    {
+        "variable_assign": {
+            "name": "x",
+            "value": {
+                "integer": 15
+            }
+        }
+    },
+    {
+        "if": {
+            "condition": {
+                "type": "equal",
+                "left": {
+                    "identifier": "x"
+                },
+                "right": {
+                    "integer": 12
+                }
+            },
+            "then": [
+                [],
+                {
+                    "function_call": {
+                        "name": "print",
+                        "parameters": [
+                            {
+                                "string": "\"hello world\""
+                            }
+                        ]
+                    }
+                },
+                []
+            ]
+        }
+    }
+]
