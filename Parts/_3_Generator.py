@@ -1,3 +1,138 @@
+output = []
+symbol_table = {}
+stack_offset = 0  # will ALWAYS be 0 at the start of every functon
+# registers_full = {f"r{i}": None for i in range(16)}
+# registers_half = {f"r{i}{hl}": None for i in range(8) for hl in ("h", "l")}
+# registers = {**registers_full, **registers_half}
+
+
+class Registers:
+    def __init__(self, name) -> None:
+        self.name = name
+        # self.purpose = None
+        self.high = None
+        self.low = None
+        self.full = None
+
+    # def is__upper_half_free(self):
+    #     return self.high is None and self.full is None
+
+    # def is_lower_half_free(self):
+    #     return self.low is None and self.full is None
+
+    def is_half_free(self):
+        if self.low is None and self.full is None:
+            return "low"
+        elif self.high is None and self.full is None:
+            return "high"
+        else:
+            return False
+
+    def is_full_free(self):
+        return self.low is None and self.high is None and self.full is None
+
+    def set_high(self, value):
+        self.high = value
+
+    def set_low(self, value):
+        self.low = value
+
+    def set_full(self, value):
+        self.high = None
+        self.low = None
+        self.full = value
+
+
+registers = {f"r{i}": Registers(f"r{i}") for i in range(16)}
+
+
+def emit(line, indent=True):
+    if indent:
+        line = "  " + line
+    output.append(line)
+
+
+def alloc_full_reg(purpose="in_use"):
+    # for register in registers:
+    #     if not (register.endswith("h") or register.endswith("l")):
+    #         if registers[register] is None:
+    #             registers[register] = purpose
+    #             return register
+    for register in registers:
+        if registers[register].is_full_free():
+            registers[register].set_full(purpose)
+            return register
+    for variable in symbol_table:
+        # print(variable, symbol_table[variable])
+        if symbol_table[variable][0] == "r":
+            return symbol_table[variable]
+    print("No free full register")
+
+
+def alloc_half_reg(purpose="in_use"):
+    # for register in registers:
+    #     if register.endswith("h") or register.endswith("l"):
+    #         if registers[register] is None:
+    #             registers[register] = purpose
+    #             return register
+    for register in registers:
+        if registers[register].is_half_free() == "low":
+            registers[register].set_low(purpose)
+            return register + "l"
+        elif registers[register].is_half_free() == "high":
+            registers[register].set_high(purpose)
+            return register + "h"
+
+    print("No free half register")
+
+
+def generator(tree):
+    for branch in tree:
+        # print(branch["node"])
+
+        if branch["node"] == "functionDefinition":
+            function_name = branch["name"]
+            emit(f"{function_name}:", False)
+            emit("psh rbp")
+            emit("mov rbp, rsp")
+            # add code here to support return typed, and parameters and stuff
+            # body = branch.get("body", [])
+            body = branch["body"]
+            generator(body)
+
+            emit("pop bp")
+            emit("rtn")
+        elif branch["node"] == "variableDefinition":
+            variable_name = branch["name"]
+            variable_type = branch["type"]
+            variable_value = branch["value"]
+            # print(variable_name, symbol_table)
+            if variable_name in symbol_table:
+                # variable is already allocated
+                variable_register = symbol_table[variable_name]
+                pass
+            else:
+                if variable_type in ("short", "char"):
+                    variable_register = alloc_half_reg(variable_name)
+                else:
+                    variable_register = alloc_full_reg(variable_name)
+                symbol_table[variable_name] = variable_register
+
+            if variable_value is None:
+                # variable initialization
+                emit(f"lod 0, {variable_register}")
+            else:
+                if variable_value["node"] == "literal":
+                    # var = some value
+                    emit(f"lod {variable_value['value']}, {variable_register}")
+                else:
+                    # var = some expression
+                    pass
+
+    return output
+
+
+"""
 # you can probably tell this is chatgpt generated
 # but im gonna rewrite it all to the way i understand code
 # have mercy, i'm still learning how to do this :sob:
@@ -6,39 +141,51 @@
 class Register:
     def __init__(self, name):
         self.name = name
-        self.in_use = False
         self.purpose = None
-        self.low = None
         self.high = None
+        self.low = None
+        self.full = None
 
     def is_free(self):
-        return not self.in_use and self.low is None and self.high is None
+        return self.low is None and self.high is None and self.full is None
 
+    def set_high(self, int: value):
+        self.high = value
+
+    def set_low(self, int: value):
+        self.low = value
+
+    def set_full(self, int: value):
+        self.high = None
+        self.low = None
+        self.full = value
+
+    def get_high(self):
+        return self.high
+
+    def get_low(self):
+        return self.low
+
+    def get_full(self):
+        return self.full
 
 registers = {f"r{i}": Register(f"r{i}") for i in range(16)}
-
-
-def get_low(name):
-    return registers[name].low
-
-
-def get_high(name):
-    return registers[name].high
 
 
 def alloc_full_register(purpose="in_use"):
     for reg in registers.values():
         if reg.is_free():
-            reg.in_use = True
+            # reg.in_use = True
             reg.purpose = purpose
             return reg.name
     raise Exception("No free full register")
+# MAKE THIS SAVE A VARIABLE ELSEWHERE THEN ALLOCATE A NEW VARIABLE
 
 
 def alloc_half_register(purpose="in_use"):
     for i in range(8):
         reg = registers[f"r{i}"]
-        if reg.in_use:
+        if reg.purpose is not None:
             continue
         if reg.low is None:
             reg.low = purpose
@@ -47,14 +194,14 @@ def alloc_half_register(purpose="in_use"):
             reg.high = purpose
             return f"{reg.name}h"
     raise Exception("No free 8-bit register")
+# THIS SHOULD BE MODIFIED TO BE LIKE THE FULL REG VERSION
 
 
 def free_register(name):
     if name in registers:
         reg = registers[name]
-        if not reg.in_use:
+        if not reg.purpose is not none:
             raise Exception(f"{name} already free")
-        reg.in_use = False
         reg.purpose = None
         reg.low = None
         reg.high = None
@@ -125,7 +272,21 @@ def compile_expression(expr, target=None):
 
 def generator(tree):
     for branch in tree:
-        if branch["node"] == "variableDefinition":
+        if branch["node"] == "functionDefinition":
+            function_name = branch["name"]
+            emit(f"{function_name}:")
+
+            emit("psh rbp")
+            emit("mov rsp, rbp")
+            # add code here to support return typed, and parameters and stuff
+            # body = branch.get("body", [])
+            body = branch["body"]
+            generator(body)
+
+            emit("pop bp")
+            emit("rtn")
+
+        elif branch["node"] == "variableDefinition":
             variable_name = branch["name"]
 
             if variable_name in symbol_table:
@@ -142,149 +303,74 @@ def generator(tree):
             if expr is None:
                 emit(f"lod 0, {variable_register}")
             elif expr["node"] == "literal":
-                emit(f"lod {expr['value']}, {variable_register}")
+                emit(f"lod {expr["value"]}, {variable_register}")
             else:
                 result_reg = compile_expression(expr, target=variable_register)
-
                 if result_reg != variable_register:
                     emit(f"cpy {result_reg}, {variable_register}")
                     free_register(result_reg)
 
+        elif branch["node"] == "functionCall":
+            # to do: arguments when calling a function
+            emit(f"call {branch['name']}")
+
+        elif branch["node"] == "return":
+            value = branch["value"]
+            result_reg = compile_expression(value)
+            emit(f"mov {result_reg}, r0")
+            free_register(result_reg)
+            emit("pop bp")
+            emit("ret")
+
+        elif branch["node"] == "if":
+            condition = branch["condition"]
+            then_body = branch["then"]
+            else_body = branch.get("else")
+
+            label_id = len(output)
+            else_label = f"else_{label_id}"
+            end_label = f"endif_{label_id}"
+
+            if condition["node"] == "binaryExpression":
+                left = condition["left"]
+                right = condition["right"]
+
+                if left["node"] == "literal" and right["node"] == "literal":
+                    emit(f"cmp {left['value']}, {right['value']}")
+                else:
+                    left_reg = compile_expression(left)
+                    right_reg = compile_expression(right)
+                    emit(f"cmp {left_reg}, {right_reg}")
+                    free_register(left_reg)
+                    free_register(right_reg)
+
+                jump_map = {
+                    "==": "jne",
+                    "!=": "je",
+                    "<": "jge",
+                    ">": "jle",
+                    "<=": "jg",
+                    ">=": "jl",
+                }
+
+                jump_instr = jump_map.get(condition["type"])
+                if not jump_instr:
+                    raise Exception(
+                        f"Unsupported if condition type: {condition['type']}"
+                    )
+                emit(f"{jump_instr} {else_label}")
+            else:
+                raise Exception("Unsupported if condition node type")
+
+            generator(then_body)
+
+            if else_body:
+                emit(f"jmp {end_label}")
+                emit(f"{else_label}:")
+                generator(else_body)
+                emit(f"{end_label}:")
+            else:
+                emit(f"{else_label}:")
+
     return output
-
-
-# registers = {f"r{i}": None for i in range(16)}
-# registers_hl = {f"r{i//2}{'h' if i % 2 == 0 else 'l'}": None for i in range(16)}
-# register_stack = []
-
-
-# def register_alloc(purpose="in_use", small=False):
-#     if not small:
-#         for name, value in registers.items():
-#             if value is None:
-#                 registers[name] = purpose
-#                 if int(name[1]) < 8:
-#                     registers_hl[name+"h"] = purpose + "_16Bit"
-#                     registers_hl[name+"l"] = purpose + "_16Bit"
-#                 return name
-#         raise Exception("No register available")
-#     else:
-#         for name, value in registers_hl.items():
-#             if value is None:
-#                 registers_hl[name] = purpose
-#                 if int(name.replace("h", "").replace("l", "")[1]) < 8:
-#                     registers[name.replace("h", "").replace("l", "")] = purpose
-#                 return name
-#         raise Exception("No register available")
-
-# def register_free(name):
-#     if (name not in registers) and (name not in registers_hl):
-#         raise Exception("Register not found")
-#     if name in registers:
-#         if registers[name] is None:
-#             raise Exception("Register is not in use")
-#         else:
-#             registers[name] = None
-#             registers_hl[name+"h"] = None
-#             registers_hl[name+"l"] = None
-#     elif name in registers_hl:
-#         if registers_hl[name] is None:
-#             raise Exception("Register is not in use")
-#         else:
-#             registers_hl[name] = None
-#             registers[name.replace("h", "").replace("l", "")] = None
-#     return True
-
-# # print(registers, registers_hl)
-# print(register_alloc("HELLOOOOOOOOO"))
-# # print(registers, registers_hl)
-# print(register_alloc(small=True))
-# # print(registers, registers_hl)
-# print(register_free("r0"))
-# print(registers, registers_hl)
-
-
-# registers = [
-#     {"r0": None},
-#     {"r1": None},
-#     {"r2": None},
-#     {"r3": None},
-#     {"r4": None},
-#     {"r5": None},
-#     {"r6": None},
-#     {"r7": None},
-#     {"r8": None},
-#     {"r9": None},
-#     {"r10": None},
-#     {"r11": None},
-#     {"r12": None},
-#     {"r13": None},
-#     {"r14": None},
-#     {"r15": None},
-# ]
-# registers_hl = [
-#     {"r0h": None},
-#     {"r0l": None},
-#     {"r1h": None},
-#     {"r1l": None},
-#     {"r2h": None},
-#     {"r2l": None},
-#     {"r3h": None},
-#     {"r3l": None},
-#     {"r4h": None},
-#     {"r4l": None},
-#     {"r5h": None},
-#     {"r5l": None},
-#     {"r6h": None},
-#     {"r6l": None},
-#     {"r7h": None},
-#     {"r7l": None},
-# ]
-
-
-# def register_alloc(name="in_use"):
-#     for register in registers:
-#         reg_name, reg_value = next(iter(register.items()))
-#         if reg_value is None:
-#             register[reg_name] = name  # mark as in use
-#             # If register has high/low segment (r0-r7), set both high and low as in use
-#             if reg_name.startswith("r") and reg_name[1].isdigit() and int(reg_name[1]) < 8:
-#                 idx = int(reg_name[1])
-#                 for reg_hl in registers_hl:
-#                     for hl_name in reg_hl:
-#                         if hl_name in (f"r{idx}h", f"r{idx}l"):
-#                             reg_hl[hl_name] = name  # mark high/low as in use
-#             return reg_name
-#     raise Exception("No register available")
-
-
-# def free_register(reg_name):
-#     # Free the main register
-#     found = False
-#     for register in registers:
-#         if reg_name in register:
-#             register[reg_name] = None
-#             found = True
-#             break
-#     if not found:
-#         raise Exception(f"Register {reg_name} not found")
-#     # If register has high/low segment (r0-r7), free both high and low as well
-#     if reg_name.startswith("r") and reg_name[1].isdigit() and int(reg_name[1]) < 8 and len(reg_name) == 2:
-#         idx = int(reg_name[1])
-#         for reg_hl in registers_hl:
-#             for hl_name in reg_hl:
-#                 if hl_name in (f"r{idx}h", f"r{idx}l"):
-#                     reg_hl[hl_name] = None
-#     return True
-
-
-# def generate(tree):
-#     for element in tree:
-#         print(element["node"])
-#     return tree
-
-
-# print(register_alloc())
-# print(registers_hl)
-
-# # GONNNA WORK ON THE ISA BEFORE DOING THIS
+"""
