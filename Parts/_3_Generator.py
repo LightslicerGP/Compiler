@@ -1,9 +1,6 @@
 output = []
 symbol_table = {}
 stack_offset = 0  # will ALWAYS be 0 at the start of every functon
-# registers_full = {f"r{i}": None for i in range(16)}
-# registers_half = {f"r{i}{hl}": None for i in range(8) for hl in ("h", "l")}
-# registers = {**registers_full, **registers_half}
 
 
 class Registers:
@@ -13,12 +10,6 @@ class Registers:
         self.high = None
         self.low = None
         self.full = None
-
-    # def is__upper_half_free(self):
-    #     return self.high is None and self.full is None
-
-    # def is_lower_half_free(self):
-    #     return self.low is None and self.full is None
 
     def is_half_free(self):
         if self.low is None and self.full is None:
@@ -52,29 +43,43 @@ def emit(line, indent=True):
     output.append(line)
 
 
+def spill_register(register):
+    global stack_offset
+    for var, entry in symbol_table.items():
+        if entry["location"] == register:
+            stack_offset += 2  # assuming int = 2 bytes
+            entry["location"] = f"[rbp-{stack_offset}]"
+            entry["stack_offset"] = stack_offset
+            emit(f"str {register}, [rbp-{stack_offset}]")
+            registers[register].set_full(None)
+            break
+
+
+def get_reg_for_var(var):
+    entry = symbol_table[var]
+    if entry["location"].startswith("r"):
+        return entry["location"]
+    else:
+        reg = alloc_full_reg(var)
+        emit(f"lod {entry['location']}, {reg}")
+        entry["location"] = reg
+        return reg
+
+
 def alloc_full_reg(purpose="in_use"):
-    # for register in registers:
-    #     if not (register.endswith("h") or register.endswith("l")):
-    #         if registers[register] is None:
-    #             registers[register] = purpose
-    #             return register
     for register in registers:
         if registers[register].is_full_free():
             registers[register].set_full(purpose)
             return register
-    for variable in symbol_table:
-        # print(variable, symbol_table[variable])
-        if symbol_table[variable][0] == "r":
-            return symbol_table[variable]
-    print("No free full register")
+    # No free reg, spill one
+    reg_to_spill = next(iter(registers))
+    spill_register(reg_to_spill)
+    registers[reg_to_spill].set_full(purpose)
+    return reg_to_spill
 
 
 def alloc_half_reg(purpose="in_use"):
-    # for register in registers:
-    #     if register.endswith("h") or register.endswith("l"):
-    #         if registers[register] is None:
-    #             registers[register] = purpose
-    #             return register
+
     for register in registers:
         if registers[register].is_half_free() == "low":
             registers[register].set_low(purpose)
@@ -108,25 +113,28 @@ def generator(tree):
             variable_value = branch["value"]
             # print(variable_name, symbol_table)
             if variable_name in symbol_table:
-                # variable is already allocated
-                variable_register = symbol_table[variable_name]
-                pass
+                # already allocated
+                variable_entry = symbol_table[variable_name]
+                variable_register = variable_entry["location"]
             else:
                 if variable_type in ("short", "char"):
                     variable_register = alloc_half_reg(variable_name)
                 else:
                     variable_register = alloc_full_reg(variable_name)
-                symbol_table[variable_name] = variable_register
+
+                # put into symbol_table in the new format
+                symbol_table[variable_name] = {
+                    "location": variable_register,
+                    "stack_offset": None,  # not spilled yet
+                }
 
             if variable_value is None:
-                # variable initialization
                 emit(f"lod 0, {variable_register}")
             else:
                 if variable_value["node"] == "literal":
-                    # var = some value
                     emit(f"lod {variable_value['value']}, {variable_register}")
                 else:
-                    # var = some expression
+                    # TODO: handle expressions
                     pass
 
     return output

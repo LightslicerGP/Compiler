@@ -1,6 +1,7 @@
+int a;
+
 int main()
 {
-    int a;
     int b;
     int c;
     int d;
@@ -17,7 +18,7 @@ int main()
     int o;
     int p;
     int q;
-    int r;
+    int r = 1;
     int s;
     int t;
     int u;
@@ -26,4 +27,6 @@ int main()
     int x;
     int y;
     int z;
+    int c = 21;
+    int a = 15;
 }
