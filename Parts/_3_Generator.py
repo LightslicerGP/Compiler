@@ -137,7 +137,7 @@ def generator(tree):
                     else:
                         # TODO: handle expressions
                         pass
-                
+
         elif branch["node"] == "while":
             global label_counter
 

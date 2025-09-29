@@ -15,7 +15,11 @@ def eatToken():
 
 
 def peekToken(part: str = None):
-    idx = tokenIndex + 2 if tokens[tokenIndex + 1]["type"] in ["spaces", "newline"] else tokenIndex + 1
+    idx = (
+        tokenIndex + 2
+        if tokens[tokenIndex + 1]["type"] in ["spaces", "newline"]
+        else tokenIndex + 1
+    )
     return tokens[idx][part] if part else tokens[idx]
 
 
@@ -152,17 +156,18 @@ def parse_variable_declaration(identifier, currentType):
             expression = []
             while currentToken("type") not in ["comma", "semicolon"]:
                 expression.append(currentToken())
-                eatToken() # item on the right side of expression
+                eatToken()  # item on the right side of expression
             value = parseExpression(expression)
-            
-            
-        variables.append({
-            "node": "variableDefinition",
-            "name": identifier,
-            "type": currentType,
-            "value": value
-        })
-        # print(currentToken())
+
+        variables.append(
+            {
+                "node": "variableDefinition",
+                "name": identifier,
+                "type": currentType,
+                "value": value,
+            }
+        )
+        
         if currentToken("type") == "comma":
             eatToken()  # comma
             if currentToken("type") != "identifier":
@@ -177,7 +182,6 @@ def parse_variable_declaration(identifier, currentType):
             print_error("variable declaration", ["comma", "semicolon"])
 
     return {"node": "variableDeclarationList", "declarations": variables}
-
 
 
 def function_call(identifier):
