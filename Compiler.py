@@ -9,10 +9,7 @@ if len(sys.argv) < 2:
 else:
     file = sys.argv[1]
 
-if len(sys.argv) > 2 and sys.argv[2] == "--debug":
-    debug = True
-else:
-    debug = False
+debug = "--debug" in sys.argv
 
 print("Lexing...") if debug else None
 tokens = lexer(file)

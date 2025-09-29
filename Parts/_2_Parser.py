@@ -6,31 +6,17 @@ global tokens
 
 
 def currentToken(part: str = None):
-    if not part:
-        return tokens[tokenIndex]
-    else:
-        return tokens[tokenIndex][part]
+    return tokens[tokenIndex] if not part else tokens[tokenIndex][part]
 
 
 def eatToken():
     global tokenIndex
-    if peekToken("type") in ["spaces", "newline"]:
-        tokenIndex += 2
-    else:
-        tokenIndex += 1
+    tokenIndex += 2 if peekToken("type") in ["spaces", "newline"] else 1
 
 
 def peekToken(part: str = None):
-    if tokens[tokenIndex + 1]["type"] in ["spaces", "newline"]:
-        if part:
-            return tokens[tokenIndex + 2][part]
-        else:
-            return tokens[tokenIndex + 2]
-    else:
-        if part:
-            return tokens[tokenIndex + 1][part]
-        else:
-            return tokens[tokenIndex + 1]
+    idx = tokenIndex + 2 if tokens[tokenIndex + 1]["type"] in ["spaces", "newline"] else tokenIndex + 1
+    return tokens[idx][part] if part else tokens[idx]
 
 
 def parser(input_tokens):
@@ -62,16 +48,13 @@ def parse():
         if currentToken("type") == "leftParen":
             return function_defenition(identifier, currentType)
 
-        elif currentToken("type") == "assign":
-            return variable_defenition(identifier, currentType)
-
-        elif currentToken("type") == "semicolon":
-            return variable_initialization(identifier, currentType)
+        elif currentToken("type") in ("assign", "semicolon", "comma"):
+            return parse_variable_declaration(identifier, currentType)
 
         else:
             print_error(
                 "not function def, var assign, or var init",
-                ["assign", "leftParen", "semicolon"],
+                ["assign", "leftParen", "semicolon", "comma"],
             )
     elif currentToken("type") == "keyword":
         match currentToken("value"):
@@ -159,38 +142,42 @@ def function_defenition(identifier, currentType):
     }
 
 
-def variable_defenition(identifier, currentType):
-    if currentToken("type") != "assign":
-        print_error("variable_defenition()", "assign")
-    eatToken()  # equals
+def parse_variable_declaration(identifier, currentType):
+    variables = []
 
-    expression = []
-    while currentToken("type") != "semicolon":
-        expression.append(currentToken())
-        eatToken()  # item on the right side of expression
-    if currentToken("type") != "semicolon":
-        print_error("variable reassignment", "semicolon")
-    eatToken()  # semicolon
-    value = parseExpression(expression)
+    while True:
+        value = None
+        if currentToken("type") == "assign":
+            eatToken()  # equals
+            expression = []
+            while currentToken("type") not in ["comma", "semicolon"]:
+                expression.append(currentToken())
+                eatToken() # item on the right side of expression
+            value = parseExpression(expression)
+            
+            
+        variables.append({
+            "node": "variableDefinition",
+            "name": identifier,
+            "type": currentType,
+            "value": value
+        })
+        # print(currentToken())
+        if currentToken("type") == "comma":
+            eatToken()  # comma
+            if currentToken("type") != "identifier":
+                print_error("variable declaration", "identifier")
+            identifier = currentToken("value")
+            eatToken()  # variable name
+            continue
+        elif currentToken("type") == "semicolon":
+            eatToken()  # semicolon
+            break
+        else:
+            print_error("variable declaration", ["comma", "semicolon"])
 
-    return {
-        "node": "variableDefinition",
-        "name": identifier,
-        "type": currentType,
-        "value": value,
-    }
+    return {"node": "variableDeclarationList", "declarations": variables}
 
-
-def variable_initialization(identifier, currentType):
-    if currentToken("type") != "semicolon":
-        print_error("variable_initialization()", "semicolon")
-    eatToken()  # semicolon
-    return {
-        "node": "variableDefinition",  # rename? idk
-        "name": identifier,
-        "type": currentType,
-        "value": None,
-    }
 
 
 def function_call(identifier):

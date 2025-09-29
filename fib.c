@@ -2,10 +2,7 @@
 
 int main(void)
 {
-    // int x, y, z;
-    int x;
-    int y;
-    int z;
+    int x, y, z;
 
     while (1)
     {
