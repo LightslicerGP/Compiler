@@ -5,23 +5,29 @@ label_counter = 0
 
 
 class Registers:
+    fixed_registers = ["r13", "r14", "r15"]
+    # registers rsp, rbp, rip
     def __init__(self, name) -> None:
         self.name = name
-        # self.purpose = None
         self.high = None
         self.low = None
         self.full = None
 
     def is_half_free(self):
-        if self.low is None and self.full is None:
-            return "low"
-        elif self.high is None and self.full is None:
-            return "high"
+        if self.name not in Registers.fixed_registers:
+            if self.low is None and self.full is None:
+                return "low"
+            elif self.high is None and self.full is None:
+                return "high"
         else:
             return False
 
     def is_full_free(self):
-        return self.low is None and self.high is None and self.full is None
+        if self.name not in Registers.fixed_registers:
+            return self.low is None and self.high is None and self.full is None
+        else:
+            return False
+
 
     def set_high(self, value):
         self.high = value

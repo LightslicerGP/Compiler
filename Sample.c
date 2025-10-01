@@ -1,9 +1,4 @@
-int a, b, c;
-
-int main()
+struct Point
 {
-    while (a = 0)
-    {
-        int a = 1;
-    }
-}
+    int x, y;
+} abc, tef;
