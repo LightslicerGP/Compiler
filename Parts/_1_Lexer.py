@@ -164,6 +164,20 @@ def lexer(file):
             currentCharNum += 1
             eatChar()
 
+        elif currentChar() == ":":
+            tokens.append(
+                {
+                    "type": "colon",
+                    "value": ":",
+                    "fromLineNum": currentLineNum,
+                    "fromCharNum": currentCharNum,
+                    "toLineNum": currentLineNum,
+                    "toCharNum": currentCharNum,
+                }
+            )
+            currentCharNum += 1
+            eatChar()
+
         elif currentChar() == ";":
             tokens.append(
                 {
@@ -197,7 +211,7 @@ def lexer(file):
                 tokens.append(
                     {
                         "type": "plusAssign",
-                        "value": "-=",
+                        "value": "+=",
                         "fromLineNum": currentLineNum,
                         "fromCharNum": currentCharNum,
                         "toLineNum": currentLineNum,
@@ -393,6 +407,7 @@ def lexer(file):
                 )
                 currentCharNum += 1
                 eatChar()
+
         elif currentChar() == "!":
             if peekChar() == "=":
                 tokens.append(
@@ -421,6 +436,7 @@ def lexer(file):
                 )
                 currentCharNum += 1
                 eatChar()
+
         elif currentChar() == "|":
             if peekChar() == "|":
                 tokens.append(
@@ -449,6 +465,7 @@ def lexer(file):
                 )
                 currentCharNum += 1
                 eatChar()
+
         elif currentChar() == "&":
             if peekChar() == "&":
                 tokens.append(
@@ -477,6 +494,21 @@ def lexer(file):
                 )
                 currentCharNum += 1
                 eatChar()
+
+        elif currentChar() == "?":
+            tokens.append(
+                {
+                    "type": "question",
+                    "value": "?",
+                    "fromLineNum": currentLineNum,
+                    "fromCharNum": currentCharNum,
+                    "toLineNum": currentLineNum,
+                    "toCharNum": currentCharNum,
+                }
+            )
+            currentCharNum += 1
+            eatChar()
+
         elif currentChar() == "/":
             if peekChar() == "/":
                 currentCharNum += 2
@@ -629,7 +661,7 @@ def lexer(file):
             currentString = ""
 
         else:
-            print(f'unknown token: "{currentChar()}"')
+            print(f'Lexing Error: unknown token: "{currentChar()}"')
             currentCharNum += 1
             eatChar()
     tokens.append(

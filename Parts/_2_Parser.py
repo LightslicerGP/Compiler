@@ -49,20 +49,18 @@ def parse():
         identifier = currentToken("value")
         eatToken()  # variable/function name
 
-        if currentToken("type") == "leftParen":
-            return function_defenition(identifier, currentType)
-
-        elif currentToken("type") in ("assign", "semicolon", "comma"):
-            return parse_variable_declaration(identifier, currentType)
-
-        elif currentToken("type") == "leftBrace" and currentType == "struct":
-            return structure_defenition(identifier)
-
-        else:
-            print_error(
-                "not function def, var assign, or var init",
-                ["assign", "leftParen", "semicolon", "comma", "leftBrace"],
-            )
+        match currentToken("type"):
+            case "leftParen":
+                return function_defenition(identifier, currentType)
+            case "assign" | "semicolon" | "comma":
+                return parse_variable_declaration(identifier, currentType)
+            case "leftBrace":
+                return structure_defenition(identifier)
+            case _:
+                print_error(
+                    "not function def, var assign, or var init",
+                    ["assign", "leftParen", "semicolon", "comma", "leftBrace"],
+                )
     elif currentToken("type") == "keyword":
         match currentToken("value"):
             case "if":
@@ -73,6 +71,10 @@ def parse():
                 return parse_while()
             case "return":
                 return parse_return()
+            # add for loop
+            # add switch case
+            case _:
+                print_error("keyword", ["if", "do", "while", "return"])
     elif currentToken("type") == "identifier":
         identifier = currentToken("value")
         eatToken()  # variable/function name
@@ -110,24 +112,39 @@ def parse():
                 print_error("variable decrement", "semicolon")
             eatToken()  # semicolon
             return {"node": "decrement", "target": identifier}
+        elif currentToken("type") == "plusAssign":
+            eatToken()  # plus assign
+            expression = []
+            while currentToken("type") != "semicolon":
+                expression.append(currentToken())
+                eatToken()  # item on the right side of expression
+            eatToken()  # semicolon
+            value = parseExpression(expression)
+            return {"node": "plusAssign", "target": identifier, "value": value}
+        elif currentToken("type") == "minusAssign":
+            eatToken()  # minus assign
+            expression = []
+            while currentToken("type") != "semicolon":
+                expression.append(currentToken())
+                eatToken()  # item on the right side of expression
+            eatToken()  # semicolon
+            value = parseExpression(expression)
+            return {"node": "minusAssign", "target": identifier, "value": value}
         else:
             print_error("not function call or var reassign", ["assign", "leftParen"])
 
     else:
-        print("unknown token:", currentToken())
+        # print("unknown token:", currentToken())
+        print_error("unknown token", "idk")
         exit(1)
 
 
 def function_defenition(identifier, currentType):
-    # if currentToken("type") != "leftParen":
-    #     print_error("function_defenition()", "leftParen")
     eatToken()  # leftParen
 
     while currentToken("type") != "rightParen":
         eatToken()  # for now, no arguments allowed
 
-    # if currentToken("type") != "rightParen":
-    #     print_error("function_defenition()", "rightParen")
     eatToken()  # rightParen
 
     if currentToken("type") != "leftBrace":
@@ -137,8 +154,6 @@ def function_defenition(identifier, currentType):
     body = []
     while currentToken("type") != "rightBrace":
         body.append(parse())
-    # if currentToken("type") != "rightBrace":
-    #     print_error("function_defenition()", "rightBrace")
     eatToken()  # rightBrace
 
     return {
@@ -188,55 +203,25 @@ def parse_variable_declaration(identifier, currentType):
 
 
 def structure_defenition(identifier):
-    # if currentToken("type") != "leftBrace":
-    #     print_error("structure_defenition()", "leftBrace")
     eatToken()  # leftBrace
 
     fields = []
     while currentToken("type") != "rightBrace":
         fields.append(parse())
-        # eatToken()
-    # if currentToken("type") != "rightBrace":
-    #     print_error("structure_defenition()", "rightBrace")
     eatToken()  # rightBrace
 
-    assigned_variables = {
-        "node": "variableDeclarationList",
-        "declarations": [
-            # {"node": "variableDefinition", "name": varName, "type": identifier, "value": None},
-        ],
-    }
-    while currentToken("type") != "semicolon":
-        if currentToken("type") != "identifier":
-            print_error("structure_defenition()", "identifier")
-        varName = currentToken("value")
-        eatToken()  # variable name
-        assigned_variables["declarations"].append(
-            {
-                "node": "variableDefinition",
-                "name": varName,
-                "type": identifier,
-                "value": None,
-            }
-        )
-        if currentToken("type") != "comma":
-            print_error("structure_defenition()", "comma")
-        eatToken()  # comma
-    # if currentToken("type") != "semicolon":
-    #     print_error("structure_defenition()", "semicolon")
+    if currentToken("type") != "semicolon":
+        print_error("structure_defenition()", "semicolon")
     eatToken()  # semicolon
 
     return {
-        "node": "structureDefinition",
+        "node": "structDefinition",
         "name": identifier,
         "fields": fields,
-        "assignees": assigned_variables,
     }
 
 
 def function_call(identifier):
-    # if currentToken("type") != "leftParen":
-    #     print_error("function_call()", "leftParen")
     eatToken()  # leftParen
 
     args = []
@@ -265,8 +250,6 @@ def function_call(identifier):
         else:
             print_error("function_call() after argument", ["comma", "rightParen"])
 
-    # if currentToken("type") != "rightParen":
-    #     print_error("function_call()", "rightParen")
     eatToken()  # rightParen
 
     if currentToken("type") != "semicolon":
@@ -277,8 +260,6 @@ def function_call(identifier):
 
 
 def parse_if():
-    # if currentToken("type") != "keyword" or currentToken("value") != "if":
-    #     print_error("parse_if()", "'if' keyword")
     eatToken()  # if keyword
 
     if currentToken("type") != "leftParen":
@@ -289,8 +270,6 @@ def parse_if():
     while currentToken("type") != "rightParen":
         condition.append(currentToken())
         eatToken()  # condition
-    # if currentToken("type") != "rightParen":
-    #     print_error("parse_if()", "rightParen")
     eatToken()  # rightParen
     condition = parseExpression(condition)
 
@@ -301,8 +280,6 @@ def parse_if():
     then = []
     while currentToken("type") != "rightBrace":
         then.append(parse())
-    # if currentToken("type") != "rightBrace":
-    #     print_error("parse_if()", "rightBrace")
     eatToken()  # rightBrace
 
     if currentToken("type") == "keyword" and currentToken("value") == "else":
@@ -320,8 +297,6 @@ def parse_if():
 
             while currentToken("type") != "rightBrace":
                 or_else.append(parse())
-            # if currentToken("type") != "rightBrace":
-            #     print_error("parse_if() (else)", "rightBrace")
             eatToken()  # rightBrace
     else:
         # no "else" statement
@@ -341,8 +316,6 @@ def parse_do():
     body = []
     while currentToken("type") != "rightBrace":
         body.append(parse())
-    # if currentToken("type") != "rightBrace":
-    #     print_error("parse_do() (do)", "rightBrace")
     eatToken()  # rightBrace
 
     if currentToken("type") != "keyword" or currentToken("value") != "while":
@@ -357,8 +330,6 @@ def parse_do():
     while currentToken("type") != "rightParen":
         condition.append(currentToken())
         eatToken()  # condition
-    # if currentToken("type") != "rightParen":
-    #     print_error("parse_do() (while)", "rightParen")
     eatToken()  # rightParen
     condition = parseExpression(condition)
 
@@ -370,8 +341,6 @@ def parse_do():
 
 
 def parse_while():
-    # if currentToken("type") != "keyword" or currentToken("value") != "while":
-    #     print_error("parse_while() (while)", "'while' keyword")
     eatToken()  # while keyword
 
     if currentToken("type") != "leftParen":
@@ -382,8 +351,6 @@ def parse_while():
     while currentToken("type") != "rightParen":
         condition.append(currentToken())
         eatToken()  # condition
-    # if currentToken("type") != "rightParen":
-    #     print_error("parse_while() (while)", "rightParen")
     eatToken()  # rightParen
     condition = parseExpression(condition)
 
@@ -394,24 +361,18 @@ def parse_while():
     body = []
     while currentToken("type") != "rightBrace":
         body.append(parse())
-    # if currentToken("type") != "rightBrace":
-    #     print_error("parse_while() (do)", "rightBrace")
     eatToken()  # rightBrace
 
     return {"node": "while", "condition": condition, "body": body}
 
 
 def parse_return():
-    # if currentToken("type") != "keyword" or currentToken("value") != "return":
-    #     print_error("parse_return() (return)", "'return' keyword")
     eatToken()  # return keyword
 
     expression = []
     while currentToken("type") != "semicolon":
         expression.append(currentToken())
         eatToken()  # item after return keyword
-    # if currentToken("type") != "semicolon":
-    #     print_error("parse_return()", "semicolon")
     eatToken()  # semicolon
     value = parseExpression(expression)
 
@@ -495,12 +456,12 @@ def print_error(
     code_line = lines[currentToken("fromLineNum") - 1].rstrip("\n")
 
     error = [
-        "Compiling Error:",
+        "Parsing Error:",
         f"  File \"{os.path.abspath(file_path)}\", line {str(currentToken('fromLineNum'))}",
         f"{code_line}",
         " " * (currentToken("fromCharNum") - 1)
         + "^" * (currentToken("toCharNum") - currentToken("fromCharNum") + 1),
-        f"error from {from_loc}, expected {expected}",
-        "".join(traceback.format_stack()),
+        f"error from {from_loc}, expected {expected}\n",
+        traceback.format_stack()[-2],
     ]
     exit("\n".join(error))
