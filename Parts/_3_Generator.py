@@ -273,14 +273,14 @@ def generator(tree):
     if optimize_assembly:
         # repeatedly run optimize until no changes occur
         optimized = preoptimized_assembly
-        i = 0
+        # i = 0
         while True:
             before = list(optimized)
             optimized = optimize(optimized)
             if optimized == before:
                 break
-            i += 1
-            print(f"optimization pass {i}")
+            # i += 1
+            # print(f"optimization pass {i}")
         return optimized
     else:
         return preoptimized_assembly
@@ -527,6 +527,13 @@ def optimize(assembly):
         lod [regA], [regA]
     to:
         (None)
+        
+    and
+    
+    change:
+        lod [regA], [regB]
+    to:
+        mrd [regA], [regB]
     """
     while i < len(assembly):
 
@@ -541,6 +548,52 @@ def optimize(assembly):
                 continue
             else:
                 assembly[i] = f"  mrd {regA}, {regB}"
+                changed = True
+        i += 1
+
+    i = 0
+    """
+    optimize:
+        add [regA], [immediate0], [regA]
+        sub [regA], [immediate1], [regA]
+    to:
+        add [regA], [immediate0 - immediate1], [regA] if [immediate0 > immediate1]
+        (OR)
+        sub [regA], [immediate1 - immediate0], [regA] if [immediate0 < immediate1]
+        (OR)
+        (None) if [immediate0 == immediate1]
+    """
+    while i < len(assembly):
+
+        match = re.match(r"\s*add\s+(r\d+),\s*([0-9]+),\s*(r\d+)", assembly[i])
+        if match:
+            regA_1 = match.group(1)
+            immediate0 = int(match.group(2))
+            regA_2 = match.group(3)
+
+            match2 = re.match(r"\s*sub\s+(r\d+),\s*([0-9]+),\s*(r\d+)", assembly[i + 1])
+            if match2:
+                regA_3 = match2.group(1)
+                immediate1 = int(match2.group(2))
+                regA_4 = match2.group(3)
+
+                if regA_1 == regA_2 == regA_3 == regA_4:
+                    if immediate0 > immediate1:
+                        assembly[i] = (
+                            f"  add {regA_1}, {immediate0 - immediate1}, {regA_1}"
+                        )
+                        del assembly[i + 1]
+                        continue
+                    elif immediate1 > immediate0:
+                        assembly[i] = (
+                            f"  sub {regA_1}, {immediate1 - immediate0}, {regA_1}"
+                        )
+                        del assembly[i + 1]
+                        continue
+                    elif immediate0 == immediate1:
+                        del assembly[i + 1]
+                        del assembly[i]
+                        continue
         i += 1
 
     if changed:
