@@ -40,8 +40,10 @@ def parser(input_tokens):
 
 def parse():
     if currentToken("type") == "type":
-        currentType = currentToken("value")
-        eatToken()  # int, char, etc.
+        currentType = []
+        while currentToken("type") == "type":
+            currentType.append(currentToken("value"))
+            eatToken()  # int, char, etc.
 
         if currentToken("type") != "identifier":
             print_error("parse() > variable type", "identifier")
@@ -163,7 +165,7 @@ def function_defenition(identifier, currentType):
         "body": body,
     }
 
-
+# TODO: fix this to support function calls
 def parse_variable_declaration(identifier, currentType):
     variables = []
 
