@@ -2,9 +2,13 @@ import re
 
 output = []
 symbol_table = {}
-stack_offset = 0  # will ALWAYS be 0 at the start of every functon
+stack_offset = 0  # will ALWAYS be 0 at the start of every function
 label_counters = {}
 optimize_assembly = True
+
+# Track registers that are temporaries created by gen_expr (so we can free them).
+# A register is "temporary" when gen_expr allocated it (literal, intermediate, cmp result).
+temp_regs = set()
 
 
 class Registers:
@@ -57,26 +61,51 @@ def new_label(label_name: str):
     return f"{label_name}{label_counters[label_name]}"
 
 
+def is_reg_for_variable(reg: str):
+    """
+    Return True if `reg` is currently listed as the location for some
+    variable in symbol_table. This prevents us from accidentally freeing
+    or clobbering variable-owned registers.
+    """
+    for entry in symbol_table.values():
+        if entry["location"] == reg:
+            return True
+    return False
+
+
 def spill_register(register: str):
     global stack_offset
+    # This still follows your original behavior: find the symbol whose
+    # location equals the register, write it to the stack, update symbol_table
     for var, entry in symbol_table.items():
         if entry["location"] == register:
             stack_offset += 2  # assuming int = 2 bytes
             entry["location"] = f"[rbp-{stack_offset}]"
             entry["stack_offset"] = stack_offset
             emit(f"str {register}, [rbp-{stack_offset}]")
+            # remove register from registers bookkeeping
             registers[register].set_full(None)
+            # If it was a temp, also drop it from temp_regs
+            temp_regs.discard(register)
             break
 
 
-def get_reg_for_var(var: int):
+def get_reg_for_var(var: str):
+    """
+    Return a register containing var's value. If the variable currently lives
+    in memory, load it into a newly allocated register *and* update symbol_table
+    to reflect the new location (so the variable becomes register-resident).
+    """
     entry = symbol_table[var]
-    if entry["location"].startswith("r"):
+    if isinstance(entry["location"], str) and entry["location"].startswith("r"):
         return entry["location"]
     else:
         reg = alloc_full_reg(var)
         emit(f"lod {entry['location']}, {reg}")
         entry["location"] = reg
+        entry["stack_offset"] = None
+        # Note: this is now variable-owned (we don't add to temp_regs),
+        # because symbol_table points at it.
         return reg
 
 
@@ -85,7 +114,8 @@ def alloc_full_reg(purpose="in_use"):
         if registers[register].is_full_free():
             registers[register].set_full(purpose)
             return register
-    # No free reg, spill one
+    # No free reg, pick one to spill (simple policy: first one)
+    # Better policies possible, but this follows your prior design.
     reg_to_spill = next(iter(registers))
     spill_register(reg_to_spill)
     registers[reg_to_spill].set_full(purpose)
@@ -103,50 +133,103 @@ def alloc_half_reg(purpose="in_use"):
     print("No free half register")
 
 
-def free_reg(reg):
+def free_reg(reg: str):
+    """
+    Free a register *only if* it is a temporary (created by gen_expr).
+    Do NOT free if the register currently belongs to a variable.
+    """
+    # half-registers (like r1l / r1h)
     if reg.endswith("l") or reg.endswith("h"):
         base = reg[:-1]
-        if reg.endswith("l"):
-            registers[base].low = None
-        else:
-            registers[base].high = None
+        # If this half reg is the location of a variable don't free it.
+        if is_reg_for_variable(reg):
+            return
+        # If it's a temporary, allow freeing
+        if reg in temp_regs:
+            if reg.endswith("l"):
+                registers[base].low = None
+            else:
+                registers[base].high = None
+            temp_regs.discard(reg)
         return
-    registers[reg].set_full(None)
+
+    # full register
+    if is_reg_for_variable(reg):
+        # Do not free registers that hold variables
+        return
+
+    if reg in temp_regs:
+        registers[reg].set_full(None)
+        temp_regs.discard(reg)
+        return
+    # If the register wasn't a temp, don't clobber it.
 
 
 def gen_expr(node):
+    """
+    Generate code for an expression node and return the register
+    containing the result of the expression (as a string, e.g. "r3").
+    Temporaries created here are tracked in temp_regs so callers can free them safely.
+    """
+
+    # -------------------------
+    # LITERAL
+    # -------------------------
     if node["node"] == "literal":
         reg = alloc_full_reg("literal")
         emit(f"lod {node['value']}, {reg}")
+        temp_regs.add(reg)  # this reg is a temporary
         return reg
+
+    # -------------------------
+    # IDENTIFIER
+    # -------------------------
     if node["node"] == "identifier":
+        # get_reg_for_var returns the register where the variable lives.
+        # That register is *not* a temporary (it's in symbol_table),
+        # so we don't add it to temp_regs.
         return get_reg_for_var(node["value"])
+
+    # -------------------------
+    # BINARY EXPRESSION
+    # -------------------------
     if node["node"] == "binaryExpression":
         op = node["type"]
         left_node = node["left"]
         right_node = node["right"]
+
         left_reg = gen_expr(left_node)
         right_reg = gen_expr(right_node)
+
+        # Arithmetic Ops --------------------------------------------
         if op == "+":
-            emit(f"add {left_reg}, {right_reg}")
+            emit(f"add {left_reg}, {right_reg}, {left_reg}")
             free_reg(right_reg)
             return left_reg
+
         if op == "-":
-            emit(f"sub {left_reg}, {right_reg}")
+            emit(f"sub {left_reg}, {right_reg}, {left_reg}")
             free_reg(right_reg)
             return left_reg
+
         if op == "*":
-            emit(f"mul {left_reg}, {right_reg}")
+            emit(f"mul {left_reg}, {right_reg}, {left_reg}")
             free_reg(right_reg)
             return left_reg
+
         if op == "/":
-            emit(f"div {left_reg}, {right_reg}")
+            emit(f"div {left_reg}, {right_reg}, {left_reg}")
             free_reg(right_reg)
             return left_reg
+
+        # Comparison Ops ---------------------------------------------
+        # Produce 0/1 boolean result in a NEW temporary register.
+        # This is used when the comparison appears inside a larger expression.
         if op in (">", "<", ">=", "<=", "==", "!="):
             emit(f"cmp {left_reg}, {right_reg}")
 
             result = alloc_full_reg("cmp_result")
+            temp_regs.add(result)  # result is a temporary
 
             true_label = new_label("EXPR_TRUE_")
             end_label = new_label("EXPR_END_")
@@ -175,20 +258,30 @@ def gen_expr(node):
 
             emit(f"{end_label}:", False)
 
-            print(symbol_table)
-            # free_reg(left_reg)
-            # free_reg(right_reg)
-            # print(symbol_table)
+            # only free operand regs if they were temporaries
+            free_reg(left_reg)
+            free_reg(right_reg)
             return result
 
         raise Exception("Unknown operator: " + op)
+
     raise Exception("Unknown expression node type: " + node["node"])
 
 
 def generator(tree):
     preoptimized_assembly = generate(tree)
     if optimize_assembly:
-        return optimize(preoptimized_assembly)
+        # repeatedly run optimize until no changes occur
+        optimized = preoptimized_assembly
+        i = 0
+        while True:
+            before = list(optimized)
+            optimized = optimize(optimized)
+            if optimized == before:
+                break
+            i += 1
+            print(f"optimization pass {i}")
+        return optimized
     else:
         return preoptimized_assembly
 
@@ -207,7 +300,7 @@ def generate(tree):
 
             # allocate space for return value (return link)
             return_type = branch["type"]
-            if "int" in return_type or "uint" in return_type:
+            if "int" in return_type:
                 emit("sub rsp, 2, rsp")  #  2 bytes, 16 bits
                 stack_offset += 2
             elif "short" in return_type:
@@ -261,7 +354,7 @@ def generate(tree):
                     # put into symbol_table
                     symbol_table[variable_name] = {
                         "location": variable_register,
-                        "stack_offset": None,  # not spilled yet
+                        "stack_offset": None,
                     }
 
                 # if no value, load 0
@@ -283,7 +376,7 @@ def generate(tree):
 
         elif branch["node"] == "while":
             """
-            general strucutre of a while loop:
+            general structure of a while loop:
             WHILE_START_X:
                 condition (like cmp r0, 0)
                 jump to WHILE_END_X if !condition (like jne)
@@ -300,12 +393,45 @@ def generate(tree):
 
             cond = branch["condition"]
 
-            reg = gen_expr(cond)
-            # If it's a literal 0 or the value will always be 0, jump to end, skip body.
-            # Otherwise compare to zero.
-            emit(f"cmp {reg}, 0")
-            emit(f"je {end_label}")
-            free_reg(reg)
+            # --- SPECIAL-CASE: if condition is a comparison expression,
+            # use flags + a single conditional jump to the loop-end.
+            if cond.get("node") == "binaryExpression" and cond.get("type") in (
+                ">",
+                "<",
+                ">=",
+                "<=",
+                "==",
+                "!=",
+            ):
+                left = cond["left"]
+                right = cond["right"]
+
+                left_reg = gen_expr(left)
+                right_reg = gen_expr(right)
+                emit(f"cmp {left_reg}, {right_reg}")
+
+                # Map condition to jump-to-end when FALSE (inverse jump)
+                inverse_jump = {
+                    ">": "jle",
+                    "<": "jge",
+                    ">=": "jl",
+                    "<=": "jg",
+                    "==": "jne",
+                    "!=": "je",
+                }[cond["type"]]
+
+                emit(f"{inverse_jump} {end_label}")
+
+                # free only temps (don't free variable-owned regs)
+                free_reg(left_reg)
+                free_reg(right_reg)
+
+            else:
+                # Generic case: evaluate condition to a register and compare to 0
+                reg = gen_expr(cond)
+                emit(f"cmp {reg}, 0")
+                emit(f"je {end_label}")
+                free_reg(reg)
 
             # recursive body
             generate(branch.get("body", []))
@@ -318,7 +444,7 @@ def generate(tree):
             value = branch["value"]
             target_register = get_reg_for_var(target)
             reg = gen_expr(value)
-            emit(f"sub {target_register}, {reg}")
+            emit(f"sub {target_register}, {reg}, {target_register}")
             free_reg(reg)
 
         elif branch["node"] == "plusAssign":
@@ -326,35 +452,99 @@ def generate(tree):
             value = branch["value"]
             target_register = get_reg_for_var(target)
             reg = gen_expr(value)
-            emit(f"add {target_register}, {reg}")
+            emit(f"add {target_register}, {reg}, {target_register}")
             free_reg(reg)
     return output
 
 
 def optimize(assembly):
     # rule of thumb: if you delete a line, dont increment i
+    changed = False
+
     i = 0
+    """
+    optimize:
+        lod [immediate], [regA]
+        lod [regA], [regDest]
+    to:
+        lod [immediate] [regDest]
+    """
     while i < len(assembly):
-        f"""
-        optimize:
-            lod [int], [regA]
-            lod [regA], [regDest]
-        to:
-            lod [int] [regDest]
-        """
+
         match = re.match(r"\s*lod\s+(\d+),\s*(r\d+)", assembly[i])
         if match:
-            int = match.group(1)
+            immediate = match.group(1)
             regA_1 = match.group(2)
 
-            match2 = re.match(r"\s*lod\s+(r\d+),\s*(r\d+)", assembly[i + 1])
-            if match2:
-                regA_2 = match2.group(1)
-                regDest = match2.group(2)
+            if i + 1 < len(assembly):
+                match2 = re.match(r"\s*lod\s+(r\d+),\s*(r\d+)", assembly[i + 1])
+                if match2:
+                    regA_2 = match2.group(1)
+                    regDest = match2.group(2)
 
-            if regA_1 == regA_2:
-                assembly[i] = f"  lod {int}, {regDest}"
-                del assembly[i + 1]
-
+                    if regA_1 == regA_2:
+                        assembly[i] = f"  lod {immediate}, {regDest}"
+                        del assembly[i + 1]
+                        changed = True
+                        continue
         i += 1
-    return assembly
+
+    i = 0
+    """
+    optimize:
+        lod [immediate], [regA]
+        [instruction] [regB], [regA]
+    to:
+        [instruction] [regB] [immediate]
+    """
+    while i < len(assembly):
+
+        match = re.match(r"\s*lod\s+(\d+),\s*(r\d+)", assembly[i])
+        if match:
+            immediate = match.group(1)
+            regA_1 = match.group(2)
+
+            if i + 1 < len(assembly):
+                match2 = re.match(r"\s*([a-z]{3})\s+(r\d+),\s*(r\d+)", assembly[i + 1])
+                if match2:
+                    instr = match2.group(1)
+                    regB = match2.group(2)
+                    regA_2 = match2.group(3)
+
+                    if regA_1 == regA_2:
+                        if instr in ["add", "sub", "mul", "div"]:
+                            assembly[i] = f"  {instr} {regB}, {immediate}, {regB}"
+                        else:
+                            assembly[i] = f"  {instr} {regB}, {immediate}"
+                        del assembly[i + 1]
+                        changed = True
+                        continue
+        i += 1
+
+    i = 0
+    """
+    optimize:
+        lod [regA], [regA]
+    to:
+        (None)
+    """
+    while i < len(assembly):
+
+        match = re.match(r"\s*lod\s+(r\d+),\s*(r\d+)", assembly[i])
+        if match:
+            regA = match.group(1)
+            regB = match.group(2)
+
+            if regA == regB:
+                del assembly[i]
+                changed = True
+                continue
+            else:
+                assembly[i] = f"  mrd {regA}, {regB}"
+        i += 1
+
+    if changed:
+        # Call recursively until no optimization occurs
+        return optimize(assembly)
+    else:
+        return assembly
